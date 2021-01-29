@@ -60,7 +60,7 @@ ic = flopy.mf6.ModflowGwfic(gwf, pname="ic", strt=start)
 
 #Not property flow - Controla flujo entre celdas
 k=np.ones([10,N,N])
-k[1,:,:]=5e-3
+k[1,:,:]=5e-1
 npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=k, save_flows=True)
 
 #
