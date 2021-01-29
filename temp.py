@@ -23,7 +23,7 @@ k = 1.0
 #Busca mf6 en la carpeta especificada y guarda los archivos
 #Crea objetos de flopy TDIS
 sim = flopy.mf6.MFSimulation(
-    sim_name=name, exe_name="C:\WRDAPP\mf6.2.0 (1)\mf6.2.0\bin", version="mf6", sim_ws="Workspace"
+    sim_name=name, exe_name="C:/WRDAPP/mf6.2.0 (1)/mf6.2.0/bin/mf6", version="mf6", sim_ws="Workspace"
     ) 
 
 #Crea el paquete de objetos de flopy TDIS
@@ -38,3 +38,72 @@ ims = flopy.mf6.ModflowIms(sim, pname="ims", complexity="SIMPLE")
 #crea el modelo de flujo de agua
 model_nam_file = "{}.nam".format(name)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, model_nam_file=model_nam_file)
+
+#se define valores de espesor de filas y paquetes de discretización
+bot = np.linspace(-H / Nlay, -H, Nlay)
+delrow = delcol = L / (N - 1)
+dis = flopy.mf6.ModflowGwfdis(
+    gwf,
+    nlay=Nlay,
+    nrow=N,
+    ncol=N,
+    delr=delrow,
+    delc=delcol,
+    top=0.0,
+    botm=bot,
+)
+
+#crear las condiciones iniciales de paquete
+start = h1 * np.ones((Nlay, N, N))
+ic = flopy.mf6.ModflowGwfic(gwf, pname="ic", strt=start)
+
+#Not property flow - Controla flujo entre celdas
+npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=k, save_flows=True)
+
+#
+chd_rec = []
+chd_rec.append(((0, int(N / 4), int(N / 4)), h2))
+for layer in range(0, Nlay):
+    for row_col in range(0, N):
+        chd_rec.append(((layer, row_col, 0), h1))
+        chd_rec.append(((layer, row_col, N - 1), h1))
+        if row_col != 0 and row_col != N - 1:
+            chd_rec.append(((layer, 0, row_col), h1))
+            chd_rec.append(((layer, N - 1, row_col), h1))
+chd = flopy.mf6.ModflowGwfchd(
+    gwf,
+    maxbound=len(chd_rec),
+    stress_period_data=chd_rec,
+    save_flows=True,
+)
+
+#
+iper = 0
+ra = chd.stress_period_data.get_data(key=iper)
+ra
+
+
+# Create the output control (`OC`) Package
+headfile = "{}.hds".format(name)
+head_filerecord = [headfile]
+budgetfile = "{}.cbb".format(name)
+budget_filerecord = [budgetfile]
+saverecord = [("HEAD", "ALL"), ("BUDGET", "ALL")]
+printrecord = [("HEAD", "LAST")]
+oc = flopy.mf6.ModflowGwfoc(
+    gwf,
+    saverecord=saverecord,
+    head_filerecord=head_filerecord,
+    budget_filerecord=budget_filerecord,
+    printrecord=printrecord,
+)
+
+#construya los .txt
+sim.write_simulation()
+
+#condicion de exito
+success, buff = sim.run_simulation()
+if not success:
+    raise Exception("MODFLOW 6 did not terminate normally.")
+
+
