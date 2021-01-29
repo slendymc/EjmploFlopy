@@ -66,6 +66,7 @@ npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=k, save_flows=True)
 #
 chd_rec = []
 chd_rec.append(((0, int(N / 4), int(N / 4)), h2))
+chd_rec.append(((1, int(3*N / 4), int(3*N / 4)), h2-5))
 for layer in range(0, Nlay):
     for row_col in range(0, N):
         chd_rec.append(((layer, row_col, 0), h1))
@@ -134,5 +135,6 @@ fig = plt.figure(figsize=(5, 2.5))
 ax = fig.add_subplot(1, 1, 1, aspect="auto")
 c = ax.contour(x, z, h[:, 50, :], np.arange(90, 100.1, 0.2), colors="black")
 plt.clabel(c, fmt="%1.1f")
+
 
 
